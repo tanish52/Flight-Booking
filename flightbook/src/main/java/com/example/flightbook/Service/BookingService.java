@@ -64,7 +64,7 @@ public class BookingService {
 
     bookingrepo.save(b);
   
-    return "Flight booked successfully";
+    return "BOOKING_SUCCESS:" + b.getId();
   }
 
 

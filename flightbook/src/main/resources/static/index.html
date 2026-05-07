@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SkyBook — Flight Booking</title>
+  <meta name="description" content="Book flights instantly with SkyBook — fast, secure, and affordable."/>
+  <link rel="stylesheet" href="/style.css"/>
+  <style>
+    .features { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.5rem; margin-top: 3rem; }
+    .feature-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.75rem; transition: all 0.25s; }
+    .feature-card:hover { border-color: var(--accent); transform: translateY(-4px); }
+    .feature-icon { font-size: 2rem; margin-bottom: 1rem; }
+    .feature-card h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .feature-card p { font-size: 0.9rem; color: var(--text-muted); }
+    .steps { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.5rem; margin-top: 2rem; }
+    .step { text-align: center; padding: 1.5rem 1rem; }
+    .step-num { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent2)); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem; margin: 0 auto 1rem; }
+    .step h4 { font-size: 0.95rem; margin-bottom: 0.35rem; }
+    .step p { font-size: 0.85rem; color: var(--text-muted); }
+    .search-bar { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; max-width: 700px; margin: 3rem auto 0; }
+    .search-bar form { display: grid; grid-template-columns: 1fr 1fr auto; gap: 1rem; align-items: end; }
+    @media (max-width: 600px) { .search-bar form { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <a href="/index.html" class="logo">Sky<span>Book</span></a>
+  <div class="nav-links">
+    <a href="/index.html" class="active">Home</a>
+    <a href="/flights.html">Flights</a>
+    <a href="/dashboard.html">Dashboard</a>
+    <div id="nav-auth-links" style="display:flex;gap:0.5rem;">
+      <a href="/login.html">Login</a>
+      <a href="/register.html" class="btn-nav">Sign Up</a>
+    </div>
+    <div id="nav-user-info" style="display:none;">
+      <span id="nav-username"></span>
+      <button id="nav-logout">Logout</button>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <h1>Fly Anywhere,<br/><span class="gradient">Anytime.</span></h1>
+  <p>Book your next flight in seconds. Real-time availability, instant confirmation, and digital tickets.</p>
+  <div class="hero-btns">
+    <a href="/flights.html" class="btn btn-primary">✈ Search Flights</a>
+    <a href="/register.html" class="btn btn-secondary">Get Started Free</a>
+  </div>
+</section>
+
+<!-- QUICK SEARCH -->
+<div class="section" style="padding-top:0;">
+  <div class="search-bar">
+    <h3 style="margin-bottom:1.2rem;font-size:1rem;color:var(--text-muted);font-weight:600;">⚡ Quick Search</h3>
+    <form id="quick-search-form">
+      <div class="form-group" style="margin:0;">
+        <label for="qs-from">From</label>
+        <input class="form-control" id="qs-from" placeholder="e.g. Delhi" required/>
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label for="qs-to">To</label>
+        <input class="form-control" id="qs-to" placeholder="e.g. Mumbai" required/>
+      </div>
+      <button type="submit" class="btn btn-primary" style="white-space:nowrap;">Search →</button>
+    </form>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<div class="section">
+  <h2 class="section-title">Why SkyBook?</h2>
+  <p class="section-sub">Everything you need for a smooth journey.</p>
+  <div class="features">
+    <div class="feature-card">
+      <div class="feature-icon">🔍</div>
+      <h3>Real-Time Search</h3>
+      <p>Search available flights by source and destination instantly with live seat availability.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🪑</div>
+      <h3>Easy Booking</h3>
+      <p>Add passengers, choose seats, and book your flight in just a few clicks.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">💳</div>
+      <h3>Secure Payments</h3>
+      <p>Process payments securely and get instant confirmation of your booking status.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🎫</div>
+      <h3>Digital Tickets</h3>
+      <p>Generate and access your e-ticket anytime, anywhere from your dashboard.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔐</div>
+      <h3>JWT Secured</h3>
+      <p>Your account and data are protected with industry-standard JWT authentication.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📊</div>
+      <h3>Booking Dashboard</h3>
+      <p>Track all your bookings, payment statuses, and tickets in one place.</p>
+    </div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<div class="section" style="background:var(--bg-card);border-radius:var(--radius);border:1px solid var(--border);">
+  <h2 class="section-title" style="text-align:center;">How It Works</h2>
+  <p class="section-sub" style="text-align:center;">Book in 4 easy steps</p>
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><h4>Create Account</h4><p>Register with your name and email to get started.</p></div>
+    <div class="step"><div class="step-num">2</div><h4>Find a Flight</h4><p>Search available flights for your route and date.</p></div>
+    <div class="step"><div class="step-num">3</div><h4>Book & Pay</h4><p>Add passenger details and complete payment.</p></div>
+    <div class="step"><div class="step-num">4</div><h4>Get Ticket</h4><p>Receive your digital e-ticket instantly.</p></div>
+  </div>
+</div>
+
+<!-- CTA -->
+<div class="section" style="text-align:center;padding-bottom:4rem;">
+  <h2 style="font-size:2rem;font-weight:800;margin-bottom:1rem;">Ready to take off?</h2>
+  <p style="color:var(--text-muted);margin-bottom:2rem;">Join thousands of travelers using SkyBook every day.</p>
+  <a href="/register.html" class="btn btn-primary" style="font-size:1.05rem;padding:0.9rem 2.5rem;">Create Free Account ✈</a>
+</div>
+
+<footer>© 2025 SkyBook. All rights reserved.</footer>
+
+<script src="/app.js"></script>
+<script>
+  document.getElementById('quick-search-form').addEventListener('submit', e => {
+    e.preventDefault();
+    const from = document.getElementById('qs-from').value.trim();
+    const to   = document.getElementById('qs-to').value.trim();
+    window.location.href = `/flights.html?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+  });
+</script>
+</body>
+</html>

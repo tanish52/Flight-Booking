@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard — SkyBook</title>
+  <meta name="description" content="Manage your bookings, payments, and tickets on SkyBook."/>
+  <link rel="stylesheet" href="/style.css"/>
+  <style>
+    .dash-grid { display: grid; grid-template-columns: 280px 1fr; gap: 2rem; }
+    @media (max-width: 860px) { .dash-grid { grid-template-columns: 1fr; } }
+    .dash-sidebar { display: flex; flex-direction: column; gap: 0.5rem; }
+    .sidebar-item {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.75rem 1rem; border-radius: 10px; cursor: pointer;
+      color: var(--text-muted); font-size: 0.9rem; font-weight: 500;
+      transition: all 0.2s; border: none; background: transparent;
+      font-family: inherit; width: 100%; text-align: left;
+    }
+    .sidebar-item:hover { background: var(--bg-card); color: var(--text-primary); }
+    .sidebar-item.active { background: var(--bg-card); color: var(--text-primary); border-left: 3px solid var(--accent); }
+    .sidebar-item .icon { width: 28px; text-align: center; }
+    .sidebar-divider { height: 1px; background: var(--border); margin: 0.5rem 0; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .action-row { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; }
+    .result-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; margin-top: 1rem; }
+    .result-box h3 { font-size: 1rem; font-weight: 700; margin-bottom: 1rem; color: var(--accent); }
+    .result-row { display: flex; justify-content: space-between; padding: 0.4rem 0; font-size: 0.9rem; border-bottom: 1px solid var(--border); }
+    .result-row:last-child { border-bottom: none; }
+    .result-row span { color: var(--text-muted); }
+    .result-row strong { color: var(--text-primary); }
+    .panel-header { margin-bottom: 1.5rem; }
+    .panel-header h2 { font-size: 1.3rem; font-weight: 700; }
+    .panel-header p  { color: var(--text-muted); font-size: 0.9rem; margin-top: 0.25rem; }
+    .ticket-box { background: linear-gradient(135deg, #1a2235, #0e1929); border: 1px solid var(--accent); border-radius: var(--radius); padding: 1.75rem; position: relative; overflow: hidden; margin-top: 1rem; }
+    .ticket-box::after { content: '✈'; position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); font-size: 4rem; opacity: 0.05; }
+    .ticket-title { font-size: 1rem; font-weight: 700; color: var(--accent); margin-bottom: 1.25rem; letter-spacing: 1px; text-transform: uppercase; }
+    .ticket-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .ticket-field label { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 0.25rem; }
+    .ticket-field strong { font-size: 0.95rem; color: var(--text-primary); }
+    .user-avatar { width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg,var(--accent),var(--accent2)); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 700; color: #fff; margin-bottom: 0.75rem; }
+    .user-name { font-size: 1rem; font-weight: 700; }
+    .user-email { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.2rem; }
+    .admin-section { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1.5rem; }
+    .admin-section h3 { font-size: 1rem; font-weight: 700; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem; }
+  </style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <a href="/index.html" class="logo">Sky<span>Book</span></a>
+  <div class="nav-links">
+    <a href="/index.html">Home</a>
+    <a href="/flights.html">Flights</a>
+    <a href="/dashboard.html" class="active">Dashboard</a>
+    <div id="nav-auth-links" style="display:flex;gap:0.5rem;">
+      <a href="/login.html">Login</a>
+      <a href="/register.html" class="btn-nav">Sign Up</a>
+    </div>
+    <div id="nav-user-info" style="display:none;">
+      <span id="nav-username"></span>
+      <button id="nav-logout">Logout</button>
+    </div>
+  </div>
+</nav>
+
+<div class="section">
+  <div class="dash-grid">
+
+    <!-- SIDEBAR -->
+    <aside>
+      <div class="card" style="margin-bottom:1rem;padding:1.25rem;">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div class="user-name" id="user-name">—</div>
+        <div class="user-email" id="user-email">—</div>
+        <div style="margin-top:0.6rem;">
+          <span id="user-role-badge" class="badge" style="font-size:0.72rem;"></span>
+        </div>
+      </div>
+
+      <div class="dash-sidebar">
+        <button class="sidebar-item active" data-panel="booking" onclick="switchPanel('booking', this)">
+          <span class="icon">🎫</span> Check Booking
+        </button>
+        <button class="sidebar-item" data-panel="payment" onclick="switchPanel('payment', this)">
+          <span class="icon">💳</span> Make Payment
+        </button>
+        <button class="sidebar-item" data-panel="ticket" onclick="switchPanel('ticket', this)">
+          <span class="icon">📄</span> Issue Ticket
+        </button>
+        <div class="sidebar-divider"></div>
+        <button class="sidebar-item" data-panel="admin" id="admin-sidebar-btn" onclick="switchPanel('admin', this)" style="display:none;">
+          <span class="icon">⚙️</span> Admin Panel
+        </button>
+        <div class="sidebar-divider"></div>
+        <button class="sidebar-item" onclick="window.location.href='/flights.html'">
+          <span class="icon">✈</span> Search Flights
+        </button>
+        <button class="sidebar-item" onclick="logout()" style="color:var(--danger);">
+          <span class="icon">🚪</span> Logout
+        </button>
+      </div>
+    </aside>
+
+    <!-- PANELS -->
+    <main>
+
+      <!-- CHECK BOOKING PANEL -->
+      <div class="panel active" id="panel-booking">
+        <div class="panel-header">
+          <h2>🎫 Check Booking</h2>
+          <p>Enter a booking ID to view its status and details.</p>
+        </div>
+        <div id="booking-alert"></div>
+        <div class="action-row">
+          <input class="form-control" id="booking-id-input" placeholder="Enter Booking ID" type="number" style="max-width:240px;"/>
+          <button class="btn btn-primary" id="check-booking-btn">Check Status</button>
+        </div>
+        <div id="booking-result"></div>
+      </div>
+
+      <!-- PAYMENT PANEL -->
+      <div class="panel" id="panel-payment">
+        <div class="panel-header">
+          <h2>💳 Make Payment</h2>
+          <p>Process payment for a confirmed booking.</p>
+        </div>
+        <div id="payment-alert"></div>
+        <div class="card">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="pay-booking-id">Booking ID</label>
+              <input class="form-control" id="pay-booking-id" type="number" placeholder="Booking ID"/>
+            </div>
+            <div class="form-group">
+              <label for="pay-amount">Amount (₹)</label>
+              <input class="form-control" id="pay-amount" type="number" placeholder="e.g. 5000" min="1"/>
+            </div>
+          </div>
+          <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+            <button class="btn btn-primary" id="make-payment-btn">💳 Make Payment</button>
+            <button class="btn btn-secondary" id="check-payment-btn">Check Status</button>
+          </div>
+        </div>
+        <div id="payment-result"></div>
+      </div>
+
+      <!-- TICKET PANEL -->
+      <div class="panel" id="panel-ticket">
+        <div class="panel-header">
+          <h2>📄 Issue Ticket</h2>
+          <p>Generate a digital ticket for a paid booking.</p>
+        </div>
+        <div id="ticket-alert"></div>
+        <div class="card" style="margin-bottom:1rem;">
+          <div class="form-group" style="margin-bottom:1rem;">
+            <label for="ticket-booking-id">Booking ID</label>
+            <input class="form-control" id="ticket-booking-id" type="number" placeholder="Enter booking ID"/>
+          </div>
+          <button class="btn btn-primary" id="issue-ticket-btn">🎫 Issue Ticket</button>
+        </div>
+        <div id="ticket-result"></div>
+      </div>
+
+      <!-- ADMIN PANEL -->
+      <div class="panel" id="panel-admin">
+        <div class="panel-header">
+          <h2>⚙️ Admin Panel</h2>
+          <p>Register new flights and manage the airline database.</p>
+        </div>
+        <div id="admin-alert"></div>
+
+        <!-- Register Flight -->
+        <div class="admin-section">
+          <h3>✈ Register New Flight</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="a-flightno">Flight Number</label>
+              <input class="form-control" id="a-flightno" placeholder="e.g. AI-202"/>
+            </div>
+            <div class="form-group">
+              <label for="a-source">Source</label>
+              <input class="form-control" id="a-source" placeholder="e.g. Delhi"/>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="a-dest">Destination</label>
+              <input class="form-control" id="a-dest" placeholder="e.g. Mumbai"/>
+            </div>
+            <div class="form-group">
+              <label for="a-dep">Departure Time</label>
+              <input class="form-control" id="a-dep" placeholder="e.g. 08:00"/>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="a-arr">Arrival Time</label>
+              <input class="form-control" id="a-arr" placeholder="e.g. 10:30"/>
+            </div>
+            <div class="form-group">
+              <label for="a-seats">Total Seats</label>
+              <input class="form-control" type="number" id="a-seats" placeholder="e.g. 180" min="1"/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="a-avail">Available Seats</label>
+            <input class="form-control" type="number" id="a-avail" placeholder="e.g. 180" min="0"/>
+          </div>
+          <button class="btn btn-primary" id="register-flight-btn">Register Flight</button>
+        </div>
+
+        <!-- Delete Flight -->
+        <div class="admin-section">
+          <h3>🗑 Delete Flight</h3>
+          <div class="action-row">
+            <input class="form-control" id="del-flight-id" type="number" placeholder="Flight ID" style="max-width:200px;"/>
+            <button class="btn btn-danger" id="delete-flight-btn">Delete Flight</button>
+          </div>
+        </div>
+
+        <!-- All Passengers -->
+        <div class="admin-section">
+          <h3>👥 All Passengers</h3>
+          <button class="btn btn-secondary btn-sm" id="load-passengers-btn">Load Passengers</button>
+          <div id="passengers-table" style="margin-top:1rem;"></div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<footer>© 2025 SkyBook. All rights reserved.</footer>
+
+<script src="/app.js"></script>
+<script>
+  // Guard: must be logged in
+  document.addEventListener('DOMContentLoaded', () => {
+    if (!isLoggedIn()) { window.location.href = '/login.html'; return; }
+    const user = getUser();
+    if (user) {
+      document.getElementById('user-avatar').textContent = (user.name || user.email || '?')[0].toUpperCase();
+      document.getElementById('user-name').textContent   = user.name  || '—';
+      document.getElementById('user-email').textContent  = user.email || '—';
+
+      // Show role badge
+      const badge = document.getElementById('user-role-badge');
+      const isAdmin = user.role === 'ADMIN';
+      badge.textContent = isAdmin ? '⭐ ADMIN' : '👤 USER';
+      badge.style.background = isAdmin ? '#1e3a5f' : 'var(--bg-card2)';
+      badge.style.color = isAdmin ? 'var(--accent)' : 'var(--text-muted)';
+      badge.style.border = isAdmin ? '1px solid #2a4f7f' : '1px solid var(--border)';
+
+      // Show admin panel only for admins
+      if (isAdmin) {
+        document.getElementById('admin-sidebar-btn').style.display = 'flex';
+      }
+    }
+
+    // Auto-switch tab and prefill booking ID from URL params (e.g. after booking)
+    const params = new URLSearchParams(location.search);
+    const tab = params.get('tab');
+    const bid = params.get('bid');
+    if (tab === 'payment') {
+      switchPanel('payment', document.querySelector('[data-panel="payment"]'));
+      if (bid) document.getElementById('pay-booking-id').value = bid;
+    }
+  });
+
+  function switchPanel(name, btn) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.sidebar-item').forEach(b => b.classList.remove('active'));
+    document.getElementById(`panel-${name}`).classList.add('active');
+    if (btn) btn.classList.add('active');
+  }
+
+  // ===== CHECK BOOKING =====
+  document.getElementById('check-booking-btn').addEventListener('click', async () => {
+    const id = document.getElementById('booking-id-input').value.trim();
+    if (!id) { showAlert('booking-alert', 'Please enter a booking ID.', 'warning'); return; }
+    showLoading('Checking booking…');
+    try {
+      const data = await apiCall('GET', `/checkFlight/${id}`);
+      document.getElementById('booking-result').innerHTML = `
+        <div class="result-box">
+          <h3>Booking #${id}</h3>
+          <div class="result-row"><span>Status</span>
+            <strong><span class="status-badge ${data.status?.toLowerCase() === 'confirmed' ? 'status-confirmed' : 'status-pending'}">
+              ${data.status || '—'}
+            </span></strong>
+          </div>
+          <div class="result-row"><span>Booking Date</span><strong>${data.bookingDate || data.BookingDate || '—'}</strong></div>
+        </div>`;
+      document.getElementById('booking-alert').innerHTML = '';
+    } catch (err) {
+      showAlert('booking-alert', err.message, 'error');
+    } finally { hideLoading(); }
+  });
+
+  document.getElementById('booking-id-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('check-booking-btn').click();
+  });
+
+  // ===== PAYMENT =====
+  document.getElementById('make-payment-btn').addEventListener('click', async () => {
+    const bid    = document.getElementById('pay-booking-id').value.trim();
+    const amount = document.getElementById('pay-amount').value.trim();
+    if (!bid || !amount) { showAlert('payment-alert', 'Please enter booking ID and amount.', 'warning'); return; }
+    showLoading('Processing payment…');
+    try {
+      const result = await apiCall('POST', `/makepayment/${bid}/${amount}`);
+      document.getElementById('payment-result').innerHTML = `
+        <div class="result-box">
+          <h3>Payment Result</h3>
+          <div class="result-row"><span>Message</span><strong>${result}</strong></div>
+          <div class="result-row"><span>Booking ID</span><strong>#${bid}</strong></div>
+          <div class="result-row"><span>Amount Paid</span><strong>₹${amount}</strong></div>
+        </div>`;
+      showAlert('payment-alert', '✓ Payment processed successfully!', 'success');
+    } catch (err) {
+      showAlert('payment-alert', err.message, 'error');
+    } finally { hideLoading(); }
+  });
+
+  document.getElementById('check-payment-btn').addEventListener('click', async () => {
+    const bid = document.getElementById('pay-booking-id').value.trim();
+    if (!bid) { showAlert('payment-alert', 'Please enter a booking ID.', 'warning'); return; }
+    showLoading('Fetching payment status…');
+    try {
+      const result = await apiCall('GET', `/getpaymentstatus/${bid}`);
+      document.getElementById('payment-result').innerHTML = `
+        <div class="result-box">
+          <h3>Payment Status — Booking #${bid}</h3>
+          <div class="result-row"><span>Status</span><strong>${result}</strong></div>
+        </div>`;
+      document.getElementById('payment-alert').innerHTML = '';
+    } catch (err) {
+      showAlert('payment-alert', err.message, 'error');
+    } finally { hideLoading(); }
+  });
+
+  // ===== TICKET =====
+  document.getElementById('issue-ticket-btn').addEventListener('click', async () => {
+    const bid = document.getElementById('ticket-booking-id').value.trim();
+    if (!bid) { showAlert('ticket-alert', 'Please enter a booking ID.', 'warning'); return; }
+    showLoading('Generating ticket…');
+    try {
+      const result = await apiCall('POST', `/issueTicket/${bid}`);
+      document.getElementById('ticket-result').innerHTML = `
+        <div class="ticket-box">
+          <div class="ticket-title">✈ E-Ticket</div>
+          <div class="ticket-grid">
+            <div class="ticket-field"><label>Booking ID</label><strong>#${bid}</strong></div>
+            <div class="ticket-field"><label>Status</label><strong style="color:var(--success)">Issued ✓</strong></div>
+          </div>
+          <div style="margin-top:1rem;padding-top:1rem;border-top:1px dashed var(--border);font-size:0.85rem;color:var(--text-muted);">
+            ${result}
+          </div>
+        </div>`;
+      showAlert('ticket-alert', '✓ Ticket issued successfully!', 'success');
+    } catch (err) {
+      showAlert('ticket-alert', err.message, 'error');
+    } finally { hideLoading(); }
+  });
+
+  // ===== ADMIN: REGISTER FLIGHT =====
+  document.getElementById('register-flight-btn').addEventListener('click', async () => {
+    const payload = {
+      flightNumber:   document.getElementById('a-flightno').value.trim(),
+      source:         document.getElementById('a-source').value.trim(),
+      destination:    document.getElementById('a-dest').value.trim(),
+      departureTime:  document.getElementById('a-dep').value.trim(),
+      arrivalTime:    document.getElementById('a-arr').value.trim(),
+      totalSeats:     parseInt(document.getElementById('a-seats').value),
+      availableSeats: parseInt(document.getElementById('a-avail').value)
+    };
+    if (Object.values(payload).some(v => !v && v !== 0)) {
+      showAlert('admin-alert', 'Please fill in all flight details.', 'warning'); return;
+    }
+    showLoading('Registering flight…');
+    try {
+      const result = await apiCall('POST', '/flightregister', payload);
+      showAlert('admin-alert', `✓ ${result}`, 'success');
+      ['a-flightno','a-source','a-dest','a-dep','a-arr','a-seats','a-avail'].forEach(id => document.getElementById(id).value = '');
+    } catch (err) {
+      showAlert('admin-alert', err.message, 'error');
+    } finally { hideLoading(); }
+  });
+
+  // ===== ADMIN: DELETE FLIGHT =====
+  document.getElementById('delete-flight-btn').addEventListener('click', async () => {
+    const id = document.getElementById('del-flight-id').value.trim();
+    if (!id) { showAlert('admin-alert', 'Enter a flight ID to delete.', 'warning'); return; }
+    if (!confirm(`Delete flight #${id}? This cannot be undone.`)) return;
+    showLoading('Deleting flight…');
+    try {
+      const result = await apiCall('DELETE', `/deleteflight/${id}`);
+      showAlert('admin-alert', `✓ ${result}`, 'success');
+      document.getElementById('del-flight-id').value = '';
+    } catch (err) {
+      showAlert('admin-alert', err.message, 'error');
+    } finally { hideLoading(); }
+  });
+
+  // ===== ADMIN: ALL PASSENGERS =====
+  document.getElementById('load-passengers-btn').addEventListener('click', async () => {
+    showLoading('Loading passengers…');
+    try {
+      const passengers = await apiCall('GET', '/getallPassengers');
+      if (!passengers.length) {
+        document.getElementById('passengers-table').innerHTML = '<p style="color:var(--text-muted);font-size:0.9rem;">No passengers found.</p>';
+        return;
+      }
+      document.getElementById('passengers-table').innerHTML = `
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>Name</th><th>Age</th><th>Seat</th></tr></thead>
+            <tbody>${passengers.map(p => `
+              <tr>
+                <td>${p.id}</td>
+                <td>${p.name}</td>
+                <td>${p.age}</td>
+                <td>${p.seatNumber}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`;
+    } catch (err) {
+      showAlert('admin-alert', err.message, 'error');
+    } finally { hideLoading(); }
+  });
+</script>
+</body>
+</html>

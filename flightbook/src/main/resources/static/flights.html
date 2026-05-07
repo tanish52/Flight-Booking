@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Search Flights — SkyBook</title>
+  <meta name="description" content="Search and book available flights on SkyBook."/>
+  <link rel="stylesheet" href="/style.css"/>
+  <style>
+    .search-panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.75rem; margin-bottom: 2rem; }
+    .search-panel h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem; }
+    .search-form { display: grid; grid-template-columns: 1fr 1fr auto; gap: 1rem; align-items: end; }
+    @media (max-width: 640px) { .search-form { grid-template-columns: 1fr; } }
+    .flights-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
+    .flights-count { color: var(--text-muted); font-size: 0.9rem; }
+
+    /* BOOK MODAL */
+    .passenger-add-btn { width: 100%; background: transparent; border: 1px dashed var(--border); color: var(--accent); border-radius: 10px; padding: 0.65rem; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s; font-family: inherit; margin-bottom: 1rem; }
+    .passenger-add-btn:hover { border-color: var(--accent); background: var(--accent-glow); }
+    .remove-passenger { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 0.9rem; padding: 0; }
+    .remove-passenger:hover { opacity: 0.7; }
+    .booking-summary { background: var(--bg-card2); border-radius: 10px; padding: 1rem; margin: 1rem 0; border: 1px solid var(--border); }
+    .booking-summary-row { display: flex; justify-content: space-between; font-size: 0.88rem; padding: 0.3rem 0; color: var(--text-muted); }
+    .booking-summary-row strong { color: var(--text-primary); }
+  </style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <a href="/index.html" class="logo">Sky<span>Book</span></a>
+  <div class="nav-links">
+    <a href="/index.html">Home</a>
+    <a href="/flights.html" class="active">Flights</a>
+    <a href="/dashboard.html">Dashboard</a>
+    <div id="nav-auth-links" style="display:flex;gap:0.5rem;">
+      <a href="/login.html">Login</a>
+      <a href="/register.html" class="btn-nav">Sign Up</a>
+    </div>
+    <div id="nav-user-info" style="display:none;">
+      <span id="nav-username"></span>
+      <button id="nav-logout">Logout</button>
+    </div>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div class="section">
+  <h1 class="section-title">✈ Search Flights</h1>
+  <p class="section-sub">Find available flights for your route.</p>
+
+  <!-- SEARCH PANEL -->
+  <div class="search-panel">
+    <h2>🔍 Filter Flights</h2>
+    <div id="search-alert"></div>
+    <div class="search-form">
+      <div class="form-group" style="margin:0;">
+        <label for="src">From (Source)</label>
+        <input class="form-control" id="src" placeholder="e.g. Delhi"/>
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label for="dst">To (Destination)</label>
+        <input class="form-control" id="dst" placeholder="e.g. Mumbai"/>
+      </div>
+      <div style="display:flex;gap:0.75rem;">
+        <button id="search-btn" class="btn btn-primary">Search</button>
+        <button id="all-btn"    class="btn btn-secondary">All Flights</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="flights-header">
+    <span id="flights-count" class="flights-count"></span>
+  </div>
+  <div id="flights-container">
+    <div class="empty-state">
+      <div class="icon">✈</div>
+      <h3>Search for flights</h3>
+      <p>Enter source and destination above, or click "All Flights" to browse.</p>
+    </div>
+  </div>
+</div>
+
+<!-- BOOKING MODAL -->
+<div class="modal-overlay" id="book-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <h2>Book Flight</h2>
+        <p style="font-size:0.85rem;color:var(--text-muted);margin-top:0.2rem;" id="modal-flight-info"></p>
+      </div>
+      <button class="modal-close" id="close-modal">×</button>
+    </div>
+
+    <div id="book-alert"></div>
+
+    <div class="booking-summary" id="booking-summary" style="display:none;">
+      <div class="booking-summary-row"><span>Flight</span><strong id="sum-flight"></strong></div>
+      <div class="booking-summary-row"><span>Route</span><strong id="sum-route"></strong></div>
+      <div class="booking-summary-row"><span>Departure</span><strong id="sum-dep"></strong></div>
+      <div class="booking-summary-row"><span>Available Seats</span><strong id="sum-seats"></strong></div>
+    </div>
+
+    <div id="passengers-list"></div>
+    <button class="passenger-add-btn" id="add-passenger-btn">+ Add Passenger</button>
+
+    <div style="display:flex;gap:0.75rem;margin-top:0.5rem;">
+      <button class="btn btn-secondary" id="cancel-book-btn" style="flex:1;">Cancel</button>
+      <button class="btn btn-primary" id="confirm-book-btn" style="flex:2;">Confirm Booking</button>
+    </div>
+  </div>
+</div>
+
+<footer>© 2025 SkyBook. All rights reserved.</footer>
+
+<script src="/app.js"></script>
+<script>
+  let selectedFlight = null;
+  let passengerCount = 0;
+
+  // Read URL params for quick search from homepage
+  const params = new URLSearchParams(location.search);
+  if (params.get('from')) document.getElementById('src').value = params.get('from');
+  if (params.get('to'))   document.getElementById('dst').value = params.get('to');
+  if (params.get('from') || params.get('to')) searchFlights();
+
+  // ===== LOAD FLIGHTS =====
+  async function loadAllFlights() {
+    showLoading('Loading flights…');
+    try {
+      const flights = await apiCall('GET', '/allflights');
+      renderFlights(flights, 'All Available Flights');
+    } catch (err) {
+      showAlert('search-alert', err.message, 'error');
+    } finally { hideLoading(); }
+  }
+
+  async function searchFlights() {
+    const src = document.getElementById('src').value.trim();
+    const dst = document.getElementById('dst').value.trim();
+    if (!src || !dst) { showAlert('search-alert', 'Please enter both source and destination.', 'warning'); return; }
+    showLoading('Searching flights…');
+    try {
+      const flights = await apiCall('GET', `/flightsearch/${encodeURIComponent(src)}/${encodeURIComponent(dst)}`);
+      renderFlights(flights, `${src} → ${dst}`);
+    } catch (err) {
+      showAlert('search-alert', err.message, 'error');
+    } finally { hideLoading(); }
+  }
+
+  let flightsCache = [];
+
+  function renderFlights(flights, label) {
+    const c = document.getElementById('flights-container');
+    document.getElementById('flights-count').textContent =
+      flights.length ? `${flights.length} flight${flights.length > 1 ? 's' : ''} found for "${label}"` : '';
+
+    if (!flights.length) {
+      c.innerHTML = `<div class="empty-state"><div class="icon">🔍</div><h3>No flights found</h3><p>Try a different route or check "All Flights".</p></div>`;
+      return;
+    }
+
+    flightsCache = flights;
+
+    c.innerHTML = `<div class="flight-grid">${flights.map((f, i) => `
+      <div class="flight-card" data-index="${i}">
+        <div class="flight-route">
+          <div class="flight-city">${f.source}</div>
+          <div class="flight-arrow">──✈──</div>
+          <div class="flight-city">${f.destination}</div>
+        </div>
+        <div class="flight-meta">
+          <span class="badge badge-blue">✈ ${f.flightNumber}</span>
+          <span class="badge">🕐 ${f.departureTime}</span>
+          <span class="badge">🕔 ${f.arrivalTime}</span>
+        </div>
+        <div class="flight-seats">
+          Available seats: <strong>${f.availableSeats}</strong> / ${f.totalSeats}
+        </div>
+        <button class="btn btn-primary btn-sm book-btn" data-index="${i}" style="margin-top:1rem;width:100%;">
+          Book This Flight →
+        </button>
+      </div>`).join('')}</div>`;
+
+    // Attach click handlers AFTER rendering (avoids HTML attribute escaping issues)
+    c.querySelectorAll('.flight-card').forEach(card => {
+      card.addEventListener('click', () => openBookModal(flightsCache[+card.dataset.index]));
+    });
+    c.querySelectorAll('.book-btn').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        openBookModal(flightsCache[+btn.dataset.index]);
+      });
+    });
+  }
+
+  document.getElementById('search-btn').addEventListener('click', searchFlights);
+  document.getElementById('all-btn').addEventListener('click', loadAllFlights);
+  document.getElementById('src').addEventListener('keydown', e => e.key === 'Enter' && searchFlights());
+  document.getElementById('dst').addEventListener('keydown', e => e.key === 'Enter' && searchFlights());
+
+  // ===== BOOKING MODAL =====
+  function openBookModal(flight) {
+    if (!isLoggedIn()) {
+      showAlert('search-alert', '⚠ Please login first to book a flight.', 'warning');
+      setTimeout(() => window.location.href = '/login.html', 1800);
+      return;
+    }
+    selectedFlight = flight;
+    passengerCount = 0;
+    document.getElementById('passengers-list').innerHTML = '';
+    document.getElementById('modal-flight-info').textContent =
+      `${selectedFlight.flightNumber} · ${selectedFlight.source} → ${selectedFlight.destination}`;
+
+    // Booking summary
+    document.getElementById('sum-flight').textContent = selectedFlight.flightNumber;
+    document.getElementById('sum-route').textContent  = `${selectedFlight.source} → ${selectedFlight.destination}`;
+    document.getElementById('sum-dep').textContent    = selectedFlight.departureTime;
+    document.getElementById('sum-seats').textContent  = selectedFlight.availableSeats;
+    document.getElementById('booking-summary').style.display = 'block';
+
+    document.getElementById('book-alert').innerHTML = '';
+    addPassenger();
+    document.getElementById('book-modal').classList.add('show');
+  }
+
+  function closeBookModal() {
+    document.getElementById('book-modal').classList.remove('show');
+    selectedFlight = null;
+  }
+
+  document.getElementById('close-modal').addEventListener('click', closeBookModal);
+  document.getElementById('cancel-book-btn').addEventListener('click', closeBookModal);
+  document.getElementById('book-modal').addEventListener('click', e => { if (e.target === e.currentTarget) closeBookModal(); });
+
+  function addPassenger() {
+    passengerCount++;
+    const idx = passengerCount;
+    const row = document.createElement('div');
+    row.className = 'passenger-row';
+    row.id = `passenger-${idx}`;
+    row.innerHTML = `
+      <div class="passenger-row-header">
+        <h4>Passenger ${idx}</h4>
+        ${idx > 1 ? `<button class="remove-passenger" onclick="removePassenger(${idx})">✕ Remove</button>` : ''}
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="margin:0;">
+          <label>Name</label>
+          <input class="form-control" id="p${idx}-name" placeholder="Full name" required/>
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label>Age</label>
+          <input class="form-control" type="number" id="p${idx}-age" placeholder="Age" min="1" max="120" required/>
+        </div>
+      </div>
+      <div class="form-group" style="margin:0;margin-top:0.75rem;">
+        <label>Seat Number</label>
+        <input class="form-control" type="number" id="p${idx}-seat" placeholder="e.g. 12" min="1" required/>
+      </div>`;
+    document.getElementById('passengers-list').appendChild(row);
+  }
+
+  function removePassenger(idx) {
+    document.getElementById(`passenger-${idx}`)?.remove();
+  }
+
+  document.getElementById('add-passenger-btn').addEventListener('click', addPassenger);
+
+  document.getElementById('confirm-book-btn').addEventListener('click', async () => {
+    if (!selectedFlight) return;
+    let user = getUser();
+    if (!user) { window.location.href = '/login.html'; return; }
+
+    // Gather passengers first
+    const passengers = [];
+    for (let i = 1; i <= passengerCount; i++) {
+      const nameEl = document.getElementById(`p${i}-name`);
+      const ageEl  = document.getElementById(`p${i}-age`);
+      const seatEl = document.getElementById(`p${i}-seat`);
+      if (!nameEl) continue; // removed passenger
+      const name = nameEl.value.trim();
+      const age  = parseInt(ageEl.value);
+      const seat = parseInt(seatEl.value);
+      if (!name || !age || !seat) {
+        showAlert('book-alert', 'Please fill in all passenger details.', 'warning');
+        return;
+      }
+      passengers.push({ name, age, seatNumber: seat });
+    }
+    if (!passengers.length) { showAlert('book-alert', 'Add at least one passenger.', 'warning'); return; }
+
+    const btn = document.getElementById('confirm-book-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Booking…';
+
+    // If user.id is missing (stale session), fetch it now from /api/me
+    if (!user.id) {
+      try {
+        const me = await apiCall('GET', '/me', null, true);
+        user = { id: me.id, name: me.name, email: me.email, role: me.role };
+        setUser(user);
+      } catch (err) {
+        showAlert('book-alert', 'Session expired. Please log out and log in again.', 'error');
+        btn.disabled = false;
+        btn.textContent = 'Confirm Booking';
+        return;
+      }
+    }
+
+    try {
+      const result = await apiCall('POST', '/bookflight', {
+        flight: selectedFlight.id,
+        user: user.id,
+        passengers
+      });
+
+      // Parse booking ID from "BOOKING_SUCCESS:42"
+      let bookingId = null;
+      if (result && result.startsWith('BOOKING_SUCCESS:')) {
+        bookingId = result.split(':')[1];
+      }
+
+      // Show success UI inside modal
+      document.getElementById('book-alert').innerHTML = '';
+      document.getElementById('passengers-list').innerHTML = '';
+      document.getElementById('add-passenger-btn').style.display = 'none';
+      document.getElementById('booking-summary').style.display = 'none';
+      btn.style.display = 'none';
+      document.getElementById('cancel-book-btn').textContent = 'Close';
+
+      document.getElementById('book-alert').innerHTML = `
+        <div style="text-align:center;padding:1.5rem 0;">
+          <div style="font-size:3rem;margin-bottom:0.75rem;">🎉</div>
+          <h3 style="font-size:1.3rem;font-weight:800;margin-bottom:0.5rem;color:var(--success);">Booking Confirmed!</h3>
+          <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1.5rem;">
+            ${selectedFlight.flightNumber} &nbsp;·&nbsp; ${selectedFlight.source} → ${selectedFlight.destination}
+          </p>
+          ${bookingId ? `
+          <div style="background:var(--bg-dark);border:2px solid var(--accent);border-radius:12px;padding:1.25rem;margin-bottom:1.25rem;">
+            <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:0.4rem;">Your Booking ID</div>
+            <div style="font-size:2.5rem;font-weight:900;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:2px;">#${bookingId}</div>
+            <button onclick="navigator.clipboard.writeText('${bookingId}').then(()=>this.textContent='✓ Copied!').catch(()=>{})"
+              style="margin-top:0.75rem;background:var(--bg-card2);border:1px solid var(--border);color:var(--text-muted);padding:0.35rem 1rem;border-radius:8px;cursor:pointer;font-size:0.8rem;font-family:inherit;transition:all 0.2s;">
+              📋 Copy Booking ID
+            </button>
+          </div>
+          <div style="background:var(--bg-card2);border-radius:10px;padding:0.9rem;font-size:0.82rem;color:var(--text-muted);margin-bottom:1.25rem;text-align:left;">
+            💡 <strong style="color:var(--warning);">Save this ID!</strong> You'll need it to make payment and issue your ticket on the Dashboard.
+          </div>
+          <div style="display:flex;gap:0.75rem;">
+            <a href="/dashboard.html" class="btn btn-secondary" style="flex:1;justify-content:center;">Go to Dashboard</a>
+            <a href="/dashboard.html?tab=payment&bid=${bookingId}" class="btn btn-primary" style="flex:1;justify-content:center;">💳 Pay Now</a>
+          </div>` : `<p style="color:var(--success);">✓ Flight booked successfully!</p>`}
+        </div>`;
+    } catch (err) {
+      showAlert('book-alert', err.message || 'Booking failed. Please try again.', 'error');
+      btn.disabled = false;
+      btn.textContent = 'Confirm Booking';
+    }
+  });
+
+  // Load all flights on page load
+  loadAllFlights();
+</script>
+</body>
+</html>
